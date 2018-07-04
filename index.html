@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title></title>
+    <style type="text/css">
+    </style>
+    <script type="text/javascript">
+        var canvas;
+        var context;
+        var isWhite = true;//當前局是否為白子
+        var isWell = false;//是否已經結束
+        var img_b = new Image();
+        img_b.src = "images/b.png";//白棋圖
+        var img_w = new Image();
+        img_w.src = "images/w.png";//黑棋圖
+		var canvasWidth;
+		var perRectWidth;
+		var canvasPosition;
+        var chessData = new Array(15);//紀錄棋盤實際資料，0：沒棋 1: 白棋　2:黑棋
+        for (var x = 0; x < 15; x++) {
+            chessData[x] = new Array(15);
+            for (var y = 0; y < 15; y++) {
+                chessData[x][y] = 0;
+            }
+        }
+ 
+        function drawRect() {//初始化棋盤
+            canvas = document.getElementById("canvas");
+            context = canvas.getContext("2d");
+			canvasWidth = document.getElementById('div').clientWidth;
+			perRectWidth = (canvasWidth/16);
+			canvas.width=canvasWidth;
+			canvas.height=canvasWidth;
+			console.log(getPosition(canvas));
+			canvasPosition = getPosition(canvas);
+            for (var i = 0; i <= canvasWidth; i += perRectWidth) {//绘制棋盘的线
+                context.beginPath();
+                context.moveTo(0, i);
+                context.lineTo(canvasWidth, i);
+                context.closePath();
+                context.stroke();
+ 
+                context.beginPath();
+                context.moveTo(i, 0);
+                context.lineTo(i, canvasWidth);
+                context.closePath();
+                context.stroke();
+            }
+			showMessage('白子請下');
+        }
+		function getPosition(element){//取得html元素相對於document中的位置return {x:x,y:y}
+			var x = 0;
+			var y = 0;
+			while(element){
+				x+= element.offsetLeft -element.scrollLeft+ element.clientLeft;
+				y+= element.offsetTop - element.scrollTop + element.clientTop;
+				element = element.offsetParent;
+			}
+			return {x:x,y:y};
+			
+		}
+		function move(e){//測試滑鼠相對位置
+			if(canvasPosition){
+				var positionx = e.pageX-canvasPosition.x;//取得相對位置x
+				var positiony = e.pageY-canvasPosition.y;//取得相對位置y
+				showMessage('x:'+positionx+"    y:"+positiony);
+			}
+		}
+        function play(e) {//滑鼠點下觸發
+			if (isWell == true) {
+                alert("已經結束了，重新請刷新");
+                return;
+            }
+			var positionx = e.pageX-canvasPosition.x;//取得相對位置x
+			var positiony = e.pageY-canvasPosition.y;//取得相對位置y
+            var x = parseInt((positionx - perRectWidth/2) / perRectWidth);//將滑鼠位置換算至網格座標
+            var y = parseInt((positiony - perRectWidth/2) / perRectWidth);
+ 
+            if (chessData[x][y] != 0) {//判斷位置是否被下過了
+                alert("你不能在这个位置下棋");
+                return;
+            }
+ 
+            if (isWhite) {
+                isWhite = false;
+				showMessage('黑子請下');
+                drawChess(1, x, y);
+				
+            }
+            else {
+                isWhite = true;
+                showMessage('白子請下');
+				drawChess(2, x, y);
+            }
+ 
+        }
+        function drawChess(chess, x, y) {//chess 1:白子 2:黑子
+            if (x >= 0 && x < 15 && y >= 0 && y < 15) {
+                chessData[x][y] = chess;
+				context.drawImage((chess==1)?img_w:img_b, x * perRectWidth + perRectWidth/2, y * perRectWidth + perRectWidth/2,perRectWidth*0.9,perRectWidth*0.9);
+                //judge(x, y, chess);
+				if(check(x,y,chess)>=5){
+					isWell = true;//设置该局棋盘已经赢了，不可以再走了
+					if (chess == 1) {
+						showMessage("白棋赢了");
+					}
+					else {
+						showMessage("黑棋赢了");
+					}
+				}
+            }
+        }
+		function check(x , y , chess ,direction ){
+			//direction 1:左邊 2:右邊 3:上 4:下 5:左上 6:右下 7:右上 8:左下
+			if (x < 0 || x >= 15 || y < 0 || y >= 15) {
+				return 0;
+			}
+			var isChess = chess==chessData[x][y];
+			if(direction===undefined){//算所有
+				if(isChess){
+				 var max = 1+check(x-1,y,chess,1)+check(x+1,y,chess,2);
+				 var temp = 1+check(x,y-1,chess,3)+check(x,y+1,chess,4);
+				 max = (max<temp)?temp:max;
+				 temp = 1+check(x-1,y-1,chess,5)+check(x+1,y+1,chess,6);
+				 max = (max<temp)?temp:max;
+				 temp = 1+check(x+1,y-1,chess,7)+check(x-1,y+1,chess,8);
+				 max = (max<temp)?temp:max;
+				 return max;
+				}else {
+					return 0;
+				}
+			}else{
+				if(isChess){
+					var nextX =(direction==1||direction==5||direction==8)?x-1:x;//左
+					nextX=(direction==2||direction==6||direction==7)?x+1:nextX;//右
+					var nextY = (direction==3||direction==5||direction==7)?y-1:y;//上
+					nextY = (direction==4||direction==6||direction==8)?y+1:nextY;//下
+					return 1+check(nextX,nextY,chess,direction);
+				}else{
+					return 0;
+				}
+			}
+		}
+		function showMessage(s){
+			document.getElementById('message').innerHTML=s;
+		}
+    </script>
+</head>
+<body onload="drawRect()">
+	<div id='message' style="width:90vmin;height:10vmin;font-size:8vmin">
+		
+	</div>
+    <div id='div' style="width:90vmin;height:90vmin">
+        <canvas id="canvas" onmousedown="play(event)">你的瀏覽器不支持HTML5 canvas ，請使用 google chrome 瀏覽器 打開
+        </canvas>
+    </div>
+	
+ 
+</body>
+</html>
